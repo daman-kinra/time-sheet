@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Download } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Copy, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -10,9 +10,11 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { downloadTasksCsv } from '@/lib/export'
+import { buildTasksSummaryText, downloadTasksCsv } from '@/lib/export'
 import { addDaysToDateKey, getTodayKey } from '@/lib/time'
+import { cn } from '@/lib/utils'
 import { getTasksInDateRange } from '@/services/storage'
+import type { Task } from '@/types'
 
 type RangePreset = 'today' | 'last7' | 'last30' | 'custom'
 
@@ -46,17 +48,53 @@ export function ExportDialog({ disabled }: { disabled?: boolean }) {
   const [preset, setPreset] = useState<RangePreset>('last7')
   const [startDate, setStartDate] = useState(addDaysToDateKey(today, -6))
   const [endDate, setEndDate] = useState(today)
-  const [exporting, setExporting] = useState(false)
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const activeRange = useMemo(() => {
     if (preset === 'custom') return { startDate, endDate }
     return getRangeForPreset(preset)
   }, [preset, startDate, endDate])
 
+  const summaryText = useMemo(
+    () => buildTasksSummaryText(tasks),
+    [tasks],
+  )
+
+  const loadPreview = useCallback(async () => {
+    const { startDate: start, endDate: end } = activeRange
+    if (start > end) {
+      setTasks([])
+      setError('Start date must be on or before end date.')
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+    try {
+      const loaded = await getTasksInDateRange(start, end)
+      setTasks(loaded)
+      if (loaded.length === 0) {
+        setError('No tasks found for the selected date range.')
+      }
+    } catch (e) {
+      setTasks([])
+      setError(e instanceof Error ? e.message : 'Failed to load tasks')
+    } finally {
+      setLoading(false)
+    }
+  }, [activeRange])
+
+  useEffect(() => {
+    if (!open) return
+    void loadPreview()
+  }, [open, loadPreview])
+
   const handlePresetChange = (next: RangePreset) => {
     setPreset(next)
-    setError(null)
+    setCopied(false)
     if (next !== 'custom') {
       const range = getRangeForPreset(next)
       setStartDate(range.startDate)
@@ -64,29 +102,24 @@ export function ExportDialog({ disabled }: { disabled?: boolean }) {
     }
   }
 
-  const handleExport = async () => {
+  const handleDownloadCsv = () => {
     const { startDate: start, endDate: end } = activeRange
-    if (start > end) {
-      setError('Start date must be on or before end date.')
-      return
-    }
+    if (tasks.length === 0) return
+    downloadTasksCsv(tasks, start, end)
+  }
 
-    setExporting(true)
-    setError(null)
+  const handleCopy = async () => {
+    if (!summaryText) return
     try {
-      const tasks = await getTasksInDateRange(start, end)
-      if (tasks.length === 0) {
-        setError('No tasks found for the selected date range.')
-        return
-      }
-      downloadTasksCsv(tasks, start, end)
-      setOpen(false)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Export failed')
-    } finally {
-      setExporting(false)
+      await navigator.clipboard.writeText(summaryText)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setError('Could not copy to clipboard.')
     }
   }
+
+  const rangeInvalid = activeRange.startDate > activeRange.endDate
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -99,12 +132,12 @@ export function ExportDialog({ disabled }: { disabled?: boolean }) {
         Export
       </Button>
 
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Export timesheet</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">Date range</legend>
             <div className="flex flex-wrap gap-2">
@@ -115,7 +148,7 @@ export function ExportDialog({ disabled }: { disabled?: boolean }) {
                   size="sm"
                   variant={preset === option.value ? 'default' : 'outline'}
                   onClick={() => handlePresetChange(option.value)}
-                  disabled={exporting}
+                  disabled={loading}
                 >
                   {option.label}
                 </Button>
@@ -134,9 +167,9 @@ export function ExportDialog({ disabled }: { disabled?: boolean }) {
                   max={endDate}
                   onChange={(e) => {
                     setStartDate(e.target.value)
-                    setError(null)
+                    setCopied(false)
                   }}
-                  disabled={exporting}
+                  disabled={loading}
                 />
               </div>
               <div className="space-y-2">
@@ -149,26 +182,55 @@ export function ExportDialog({ disabled }: { disabled?: boolean }) {
                   max={today}
                   onChange={(e) => {
                     setEndDate(e.target.value)
-                    setError(null)
+                    setCopied(false)
                   }}
-                  disabled={exporting}
+                  disabled={loading}
                 />
               </div>
             </div>
           )}
 
-          {preset !== 'custom' && (
-            <p className="text-sm text-muted-foreground">
-              {activeRange.startDate === activeRange.endDate
-                ? `Exporting tasks for ${activeRange.startDate} (IST).`
-                : `Exporting tasks from ${activeRange.startDate} to ${activeRange.endDate} (IST).`}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="export-summary">Summary (copy)</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleCopy}
+                disabled={!summaryText || loading}
+              >
+                <Copy className="size-3.5" />
+                {copied ? 'Copied' : 'Copy'}
+              </Button>
+            </div>
+            <textarea
+              id="export-summary"
+              readOnly
+              value={
+                loading
+                  ? 'Loading…'
+                  : rangeInvalid
+                    ? ''
+                    : summaryText ||
+                      (error ? '' : 'No tasks in this range.')
+              }
+              placeholder={
+                rangeInvalid
+                  ? 'Invalid date range.'
+                  : 'Select a date range to preview tasks.'
+              }
+              className={cn(
+                'min-h-[160px] w-full resize-y rounded-lg border border-input bg-transparent px-2.5 py-2 font-mono text-sm',
+                'outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
+              )}
+            />
+            <p className="text-xs text-muted-foreground">
+              One line per task, e.g.{' '}
+              <span className="font-mono">Meeting (1hr 30min)</span>. Running
+              tasks use time tracked so far.
             </p>
-          )}
-
-          <p className="text-xs text-muted-foreground">
-            CSV includes date, title, description, start time, end time, and
-            status. Times are in IST.
-          </p>
+          </div>
 
           {error && (
             <p className="text-sm text-destructive" role="alert">
@@ -177,18 +239,21 @@ export function ExportDialog({ disabled }: { disabled?: boolean }) {
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 gap-2 sm:gap-2">
           <Button
             type="button"
             variant="outline"
             onClick={() => setOpen(false)}
-            disabled={exporting}
           >
-            Cancel
+            Close
           </Button>
-          <Button type="button" onClick={handleExport} disabled={exporting}>
+          <Button
+            type="button"
+            onClick={handleDownloadCsv}
+            disabled={loading || tasks.length === 0 || rangeInvalid}
+          >
             <Download className="size-4" />
-            {exporting ? 'Exporting…' : 'Download CSV'}
+            Download CSV
           </Button>
         </DialogFooter>
       </DialogContent>

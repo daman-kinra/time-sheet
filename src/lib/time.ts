@@ -98,6 +98,18 @@ export function formatDuration(ms: number): string {
   return `${hours}h ${minutes}m`
 }
 
+/** Human-readable duration for export copy, e.g. "1hr 30min". */
+export function formatDurationExport(ms: number): string {
+  if (ms <= 0) return '0min'
+  const totalMinutes = Math.floor(ms / 60000)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  const parts: string[] = []
+  if (hours > 0) parts.push(`${hours}hr`)
+  if (minutes > 0 || hours === 0) parts.push(`${minutes}min`)
+  return parts.join(' ')
+}
+
 export function toDatetimeLocalValue(iso: string): string {
   const { year, month, day, hour = 0, minute = 0 } = getISTParts(
     new Date(iso),

@@ -1,5 +1,9 @@
 import { rowsToCsv, downloadTextFile } from '@/lib/csv'
-import { TIMEZONE } from '@/lib/time'
+import {
+  formatDurationExport,
+  getTaskDurationMs,
+  TIMEZONE,
+} from '@/lib/time'
 import type { Task } from '@/types'
 
 const CSV_HEADERS = [
@@ -53,4 +57,36 @@ export function downloadTasksCsv(
       ? `timesheet-${startDate}.csv`
       : `timesheet-${startDate}_to_${endDate}.csv`
   downloadTextFile(filename, csv)
+}
+
+export function formatTaskSummaryLine(task: Task, now = Date.now()): string {
+  const duration = formatDurationExport(getTaskDurationMs(task, now))
+  return `${task.title} (${duration})`
+}
+
+export function buildTasksSummaryText(tasks: Task[], now = Date.now()): string {
+  if (tasks.length === 0) return ''
+
+  const sorted = [...tasks].sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date)
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  })
+
+  const dates = [...new Set(sorted.map((t) => t.date))]
+  const lines: string[] = []
+
+  for (const date of dates) {
+    const dayTasks = sorted.filter((t) => t.date === date)
+    if (dates.length > 1) {
+      lines.push(date)
+    }
+    for (const task of dayTasks) {
+      lines.push(formatTaskSummaryLine(task, now))
+    }
+    if (dates.length > 1) {
+      lines.push('')
+    }
+  }
+
+  return lines.join('\n').trim()
 }

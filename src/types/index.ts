@@ -32,3 +32,12 @@ export interface CreateTagInput {
   name: string
   color?: string
 }
+
+export interface QuickNoteItem {
+  id: string
+  text: string
+  completed: boolean
+  createdAt: string
+}
+
+export type QuickNotePanelSize = 'collapsed' | 'normal' | 'expanded'

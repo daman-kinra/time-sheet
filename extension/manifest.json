@@ -3,6 +3,12 @@
   "name": "Timesheet",
   "version": "0.0.0",
   "description": "Track tasks and time on every new tab.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "timesheet@extension.local",
+      "strict_min_version": "109.0"
+    }
+  },
   "chrome_url_overrides": {
     "newtab": "index.html"
   },

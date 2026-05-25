@@ -4,6 +4,7 @@ import { TagDialog } from '@/components/TagDialog'
 import { TagFilter } from '@/components/TagFilter'
 import { TaskCreateDialog } from '@/components/TaskCreateDialog'
 import { TaskEditDialog } from '@/components/TaskEditDialog'
+import { QuickNotePanel } from '@/components/QuickNotePanel'
 import { TaskList } from '@/components/TaskList'
 import { useTimesheet } from '@/hooks/useTimesheet'
 import { filterTasksByTags } from '@/lib/tags'
@@ -57,8 +58,9 @@ function App() {
   }
 
   return (
-    <div className="min-h-svh bg-background">
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+    <div className="flex min-h-svh bg-background">
+      <div className="min-w-0 flex-1">
+        <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
         <DayHeader
           selectedDate={selectedDate}
           workedMs={filteredWorkedMs}
@@ -122,7 +124,10 @@ function App() {
             }
           />
         </main>
+        </div>
       </div>
+
+      <QuickNotePanel />
 
       <TaskEditDialog
         task={editingTask}

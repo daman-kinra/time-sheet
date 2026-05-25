@@ -1,9 +1,10 @@
-import type { Tag, Task } from '@/types'
+import type { QuickNoteItem, Tag, Task } from '@/types'
 
 const DB_NAME = 'timesheet-db'
-const DB_VERSION = 1
+const DB_VERSION = 2
 export const TASKS_STORE = 'tasks'
 export const TAGS_STORE = 'tags'
+export const QUICK_NOTES_STORE = 'quickNotes'
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -26,6 +27,13 @@ function openDb(): Promise<IDBDatabase> {
 
         if (!db.objectStoreNames.contains(TAGS_STORE)) {
           db.createObjectStore(TAGS_STORE, { keyPath: 'id' })
+        }
+
+        if (!db.objectStoreNames.contains(QUICK_NOTES_STORE)) {
+          const noteStore = db.createObjectStore(QUICK_NOTES_STORE, {
+            keyPath: 'id',
+          })
+          noteStore.createIndex('createdAt', 'createdAt', { unique: false })
         }
       }
     })
@@ -149,5 +157,30 @@ export async function putTasks(tasks: Task[]): Promise<void> {
     for (const task of tasks) {
       store.put(task)
     }
+  })
+}
+
+export function sortQuickNotes(notes: QuickNoteItem[]): QuickNoteItem[] {
+  return [...notes].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  )
+}
+
+export async function getAllQuickNotesFromDb(): Promise<QuickNoteItem[]> {
+  const notes = await withTransaction(QUICK_NOTES_STORE, 'readonly', (stores) =>
+    requestToPromise(stores[QUICK_NOTES_STORE].getAll()),
+  )
+  return sortQuickNotes(notes)
+}
+
+export async function putQuickNote(note: QuickNoteItem): Promise<void> {
+  await withTransaction(QUICK_NOTES_STORE, 'readwrite', (stores) => {
+    stores[QUICK_NOTES_STORE].put(note)
+  })
+}
+
+export async function deleteQuickNoteById(id: string): Promise<void> {
+  await withTransaction(QUICK_NOTES_STORE, 'readwrite', (stores) => {
+    stores[QUICK_NOTES_STORE].delete(id)
   })
 }

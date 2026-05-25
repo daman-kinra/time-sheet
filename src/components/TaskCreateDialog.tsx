@@ -152,10 +152,6 @@ export function TaskCreateDialog({
   const [open, setOpen] = useState(false)
   const formId = 'create-task-form'
   const formKey = `${selectedDate}-${defaultTagIds.join(',')}`
-  const visibleTags =
-    defaultTagIds.length > 0
-      ? tags.filter((t) => defaultTagIds.includes(t.id))
-      : tags
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -174,7 +170,7 @@ export function TaskCreateDialog({
             key={formKey}
             formId={formId}
             selectedDate={selectedDate}
-            tags={visibleTags}
+            tags={tags}
             defaultTagIds={defaultTagIds}
             onCreateTask={onCreateTask}
             onSuccess={() => setOpen(false)}

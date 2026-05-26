@@ -8,6 +8,8 @@ import {
   deleteTask,
   getTags,
   getTasksByDate,
+  pauseTask,
+  resumeTask,
   startTask,
   updateTask,
 } from '@/services/storage'
@@ -114,6 +116,24 @@ export function useTimesheet(selectedDate: string) {
     [load, runAction],
   )
 
+  const pause = useCallback(
+    async (id: string) => {
+      const result = await runAction(() => pauseTask(id))
+      if (result) await load()
+      return result
+    },
+    [load, runAction],
+  )
+
+  const resume = useCallback(
+    async (id: string) => {
+      const result = await runAction(() => resumeTask(id))
+      if (result) await load()
+      return result
+    },
+    [load, runAction],
+  )
+
   const remove = useCallback(
     async (id: string) => {
       await runAction(() => deleteTask(id))
@@ -153,6 +173,8 @@ export function useTimesheet(selectedDate: string) {
     addTask,
     editTask,
     start,
+    pause,
+    resume,
     complete,
     remove,
     addTag,

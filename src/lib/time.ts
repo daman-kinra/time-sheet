@@ -1,3 +1,4 @@
+import { ensureSegments, getTaskDurationFromSegments } from '@/lib/segments'
 import type { Task } from '@/types'
 
 export const TIMEZONE = 'Asia/Kolkata' as const
@@ -123,15 +124,13 @@ export function fromDatetimeLocalValue(value: string): string {
 }
 
 export function getTaskDurationMs(task: Task, now = Date.now()): number {
-  if (!task.startedAt) return 0
-  const start = new Date(task.startedAt).getTime()
-  if (task.status === 'completed' && task.completedAt) {
-    return Math.max(0, new Date(task.completedAt).getTime() - start)
-  }
-  if (task.status === 'running') {
-    return Math.max(0, now - start)
-  }
-  return 0
+  const normalized = ensureSegments(task)
+  if (normalized.segments.length === 0) return 0
+  return getTaskDurationFromSegments(
+    normalized.segments,
+    normalized.status,
+    now,
+  )
 }
 
 export function calculateDailyWorkedMs(tasks: Task[], now = Date.now()): number {

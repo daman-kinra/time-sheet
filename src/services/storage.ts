@@ -1,3 +1,9 @@
+import {
+  closeOpenSegment,
+  ensureSegments,
+  migrateStoredTask,
+  syncTaskTimestamps,
+} from '@/lib/segments'
 import type {
   CreateTagInput,
   CreateTaskInput,
@@ -106,6 +112,7 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
     tagIds: input.tagIds ?? [],
     status: 'pending',
     createdAt: input.createdAt ?? now,
+    segments: [],
   }
   await putTask(task)
   return task
@@ -127,14 +134,91 @@ export async function updateTask(id: string, updates: TaskUpdate): Promise<Task>
         : current.description,
   }
 
-  await putTask(next)
-  return next
+  const saved = migrateStoredTask(next)
+  await putTask(saved)
+  return saved
+}
+
+async function pauseOtherRunningTasks(
+  date: string,
+  excludeId: string,
+): Promise<void> {
+  const dayTasks = await getTasksByDate(date)
+  const running = dayTasks.filter(
+    (t) => t.id !== excludeId && t.status === 'running',
+  )
+  await Promise.all(running.map((t) => pauseTask(t.id)))
+}
+
+export async function pauseTask(id: string): Promise<Task> {
+  await delay()
+  const task = await getTaskById(id)
+  if (!task) throw new Error('Task not found')
+  if (task.status !== 'running') {
+    throw new Error('Only running tasks can be paused')
+  }
+
+  const now = new Date().toISOString()
+  const migrated = ensureSegments(task)
+  const segments = closeOpenSegment(migrated.segments, now)
+
+  return updateTask(
+    id,
+    syncTaskTimestamps({
+      ...migrated,
+      status: 'paused',
+      segments,
+    }),
+  )
+}
+
+export async function resumeTask(id: string): Promise<Task> {
+  await delay()
+  const task = await getTaskById(id)
+  if (!task) throw new Error('Task not found')
+  if (task.status !== 'paused') {
+    throw new Error('Only paused tasks can be resumed')
+  }
+
+  await pauseOtherRunningTasks(task.date, id)
+
+  const now = new Date().toISOString()
+  const migrated = ensureSegments(task)
+  const segments = [...migrated.segments, { startedAt: now }]
+
+  return updateTask(
+    id,
+    syncTaskTimestamps({
+      ...migrated,
+      status: 'running',
+      segments,
+      startedAt: migrated.startedAt ?? now,
+      completedAt: undefined,
+    }),
+  )
 }
 
 export async function startTask(id: string): Promise<Task> {
   await delay()
+  const task = await getTaskById(id)
+  if (!task) throw new Error('Task not found')
+
+  await pauseOtherRunningTasks(task.date, id)
+
   const now = new Date().toISOString()
-  return updateTask(id, { status: 'running', startedAt: now })
+  const migrated = ensureSegments(task)
+  const segments = [...migrated.segments, { startedAt: now }]
+
+  return updateTask(
+    id,
+    syncTaskTimestamps({
+      ...migrated,
+      status: 'running',
+      segments,
+      startedAt: migrated.startedAt ?? now,
+      completedAt: undefined,
+    }),
+  )
 }
 
 export async function completeTask(id: string): Promise<Task> {
@@ -143,11 +227,19 @@ export async function completeTask(id: string): Promise<Task> {
   if (!task) throw new Error('Task not found')
 
   const now = new Date().toISOString()
-  return updateTask(id, {
-    status: 'completed',
-    startedAt: task.startedAt ?? now,
-    completedAt: now,
-  })
+  const migrated = ensureSegments(task)
+  const segments = closeOpenSegment(migrated.segments, now)
+
+  return updateTask(
+    id,
+    syncTaskTimestamps({
+      ...migrated,
+      status: 'completed',
+      segments,
+      startedAt: migrated.startedAt ?? segments[0]?.startedAt ?? now,
+      completedAt: now,
+    }),
+  )
 }
 
 export async function deleteTask(id: string): Promise<void> {

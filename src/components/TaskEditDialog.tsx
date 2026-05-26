@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { applyTaskEditUpdates } from '@/lib/segments'
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from '@/lib/time'
 import type { Tag, Task, TaskStatus, TaskUpdate } from '@/types'
 
@@ -64,7 +65,7 @@ function TaskEditForm({ formId, task, tags, onSave, onClose, disabled }: TaskEdi
     if (!title.trim()) return
     setSubmitting(true)
 
-    const updates: TaskUpdate = {
+    const base: TaskUpdate = {
       title: title.trim(),
       description: description.trim() || undefined,
       date,
@@ -75,22 +76,7 @@ function TaskEditForm({ formId, task, tags, onSave, onClose, disabled }: TaskEdi
       completedAt: completedAt ? fromDatetimeLocalValue(completedAt) : undefined,
     }
 
-    if (status === 'pending') {
-      updates.startedAt = undefined
-      updates.completedAt = undefined
-    } else if (status === 'running') {
-      updates.completedAt = undefined
-      if (!updates.startedAt) {
-        updates.startedAt = new Date().toISOString()
-      }
-    } else if (status === 'completed') {
-      if (!updates.startedAt) {
-        updates.startedAt = new Date().toISOString()
-      }
-      if (!updates.completedAt) {
-        updates.completedAt = new Date().toISOString()
-      }
-    }
+    const updates = applyTaskEditUpdates(task, base)
 
     await onSave(task.id, updates)
     setSubmitting(false)
@@ -145,6 +131,7 @@ function TaskEditForm({ formId, task, tags, onSave, onClose, disabled }: TaskEdi
               <SelectContent>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="running">Running</SelectItem>
+                <SelectItem value="paused">Paused</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
               </SelectContent>
             </Select>
@@ -169,7 +156,9 @@ function TaskEditForm({ formId, task, tags, onSave, onClose, disabled }: TaskEdi
             type="datetime-local"
             value={startedAt}
             onChange={(e) => setStartedAt(e.target.value)}
-            disabled={disabled || submitting || status === 'pending'}
+            disabled={
+              disabled || submitting || status === 'pending'
+            }
           />
         </div>
 
@@ -180,7 +169,11 @@ function TaskEditForm({ formId, task, tags, onSave, onClose, disabled }: TaskEdi
             type="datetime-local"
             value={completedAt}
             onChange={(e) => setCompletedAt(e.target.value)}
-            disabled={disabled || submitting || status !== 'completed'}
+            disabled={
+              disabled ||
+              submitting ||
+              (status !== 'completed' && status !== 'paused')
+            }
           />
         </div>
 

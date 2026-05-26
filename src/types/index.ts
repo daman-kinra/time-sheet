@@ -1,4 +1,9 @@
-export type TaskStatus = 'pending' | 'running' | 'completed'
+export type TaskStatus = 'pending' | 'running' | 'paused' | 'completed'
+
+export interface TimeSegment {
+  startedAt: string
+  endedAt?: string
+}
 
 export interface Tag {
   id: string
@@ -14,6 +19,7 @@ export interface Task {
   tagIds: string[]
   status: TaskStatus
   createdAt: string
+  segments: TimeSegment[]
   startedAt?: string
   completedAt?: string
 }

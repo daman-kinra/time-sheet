@@ -1,4 +1,4 @@
-import { Check, Pencil, Play, Trash2 } from 'lucide-react'
+import { Check, Pause, Pencil, Play, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -12,12 +12,14 @@ import type { Tag, Task } from '@/types'
 const statusLabels = {
   pending: 'Pending',
   running: 'Running',
+  paused: 'Paused',
   completed: 'Completed',
 } as const
 
 const statusVariant = {
   pending: 'secondary',
   running: 'default',
+  paused: 'secondary',
   completed: 'outline',
 } as const
 
@@ -26,6 +28,8 @@ interface TaskCardProps {
   tags: Tag[]
   now: number
   onStart: (id: string) => void
+  onPause: (id: string) => void
+  onResume: (id: string) => void
   onComplete: (id: string) => void
   onEdit: (task: Task) => void
   onDelete: (id: string) => void
@@ -37,6 +41,8 @@ export function TaskCard({
   tags,
   now,
   onStart,
+  onPause,
+  onResume,
   onComplete,
   onEdit,
   onDelete,
@@ -68,7 +74,7 @@ export function TaskCard({
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
             <span>Created: {formatTime(task.createdAt)}</span>
             {task.startedAt && <span>Started: {formatTime(task.startedAt)}</span>}
-            {task.completedAt && (
+            {task.completedAt && task.status === 'completed' && (
               <span>Ended: {formatTime(task.completedAt)}</span>
             )}
           </div>
@@ -101,15 +107,47 @@ export function TaskCard({
             </Button>
           )}
           {task.status === 'running' && (
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => onComplete(task.id)}
-              disabled={disabled}
-            >
-              <Check className="size-3.5" />
-              Complete
-            </Button>
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onPause(task.id)}
+                disabled={disabled}
+              >
+                <Pause className="size-3.5" />
+                Pause
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => onComplete(task.id)}
+                disabled={disabled}
+              >
+                <Check className="size-3.5" />
+                Complete
+              </Button>
+            </>
+          )}
+          {task.status === 'paused' && (
+            <>
+              <Button
+                size="sm"
+                onClick={() => onResume(task.id)}
+                disabled={disabled}
+              >
+                <Play className="size-3.5" />
+                Resume
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => onComplete(task.id)}
+                disabled={disabled}
+              >
+                <Check className="size-3.5" />
+                Complete
+              </Button>
+            </>
           )}
           <Button
             size="sm"

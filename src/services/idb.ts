@@ -1,7 +1,8 @@
+import { migrateStoredTask } from '@/lib/segments'
 import type { QuickNoteItem, Tag, Task } from '@/types'
 
 const DB_NAME = 'timesheet-db'
-const DB_VERSION = 2
+const DB_VERSION = 3
 export const TASKS_STORE = 'tasks'
 export const TAGS_STORE = 'tags'
 export const QUICK_NOTES_STORE = 'quickNotes'
@@ -18,6 +19,7 @@ function openDb(): Promise<IDBDatabase> {
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result
+        const tx = (event.target as IDBOpenDBRequest).transaction
 
         if (!db.objectStoreNames.contains(TASKS_STORE)) {
           const taskStore = db.createObjectStore(TASKS_STORE, { keyPath: 'id' })
@@ -34,6 +36,18 @@ function openDb(): Promise<IDBDatabase> {
             keyPath: 'id',
           })
           noteStore.createIndex('createdAt', 'createdAt', { unique: false })
+        }
+
+        if (event.oldVersion < 3 && tx) {
+          const taskStore = tx.objectStore(TASKS_STORE)
+          const request = taskStore.openCursor()
+          request.onsuccess = () => {
+            const cursor = request.result
+            if (!cursor) return
+            const raw = cursor.value as Task
+            cursor.update(migrateStoredTask({ ...raw, segments: raw.segments ?? [] }))
+            cursor.continue()
+          }
         }
       }
     })
@@ -116,13 +130,14 @@ export async function getAllTasksFromDb(): Promise<Task[]> {
   const tasks = await withTransaction(TASKS_STORE, 'readonly', (stores) =>
     requestToPromise(stores[TASKS_STORE].getAll()),
   )
-  return sortTasks(tasks)
+  return sortTasks(tasks.map(migrateStoredTask))
 }
 
 export async function getTaskById(id: string): Promise<Task | undefined> {
-  return withTransaction(TASKS_STORE, 'readonly', (stores) =>
+  const task = await withTransaction(TASKS_STORE, 'readonly', (stores) =>
     requestToPromise(stores[TASKS_STORE].get(id)),
   )
+  return task ? migrateStoredTask(task) : undefined
 }
 
 export async function putTask(task: Task): Promise<void> {
@@ -148,7 +163,7 @@ export async function getTasksByDateRange(
       ),
     ),
   )
-  return sortTasks(tasks)
+  return sortTasks(tasks.map(migrateStoredTask))
 }
 
 export async function putTasks(tasks: Task[]): Promise<void> {

@@ -26,6 +26,8 @@ function App() {
     addTask,
     editTask,
     start,
+    pause,
+    resume,
     complete,
     remove,
     addTag,
@@ -113,6 +115,8 @@ function App() {
             loading={loading}
             now={now}
             onStart={(id) => start(id)}
+            onPause={(id) => pause(id)}
+            onResume={(id) => resume(id)}
             onComplete={(id) => complete(id)}
             onEdit={handleEdit}
             onDelete={(id) => remove(id)}

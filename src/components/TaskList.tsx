@@ -8,6 +8,8 @@ interface TaskListProps {
   loading: boolean
   now: number
   onStart: (id: string) => void
+  onPause: (id: string) => void
+  onResume: (id: string) => void
   onComplete: (id: string) => void
   onEdit: (task: Task) => void
   onDelete: (id: string) => void
@@ -21,6 +23,8 @@ export function TaskList({
   loading,
   now,
   onStart,
+  onPause,
+  onResume,
   onComplete,
   onEdit,
   onDelete,
@@ -51,10 +55,12 @@ export function TaskList({
 
   const pending = tasks.filter((t) => t.status === 'pending')
   const running = tasks.filter((t) => t.status === 'running')
+  const paused = tasks.filter((t) => t.status === 'paused')
   const completed = tasks.filter((t) => t.status === 'completed')
 
   const sections = [
     { label: 'Running', items: running },
+    { label: 'Paused', items: paused },
     { label: 'Pending', items: pending },
     { label: 'Completed', items: completed },
   ].filter((s) => s.items.length > 0)
@@ -74,6 +80,8 @@ export function TaskList({
                 tags={tags}
                 now={now}
                 onStart={onStart}
+                onPause={onPause}
+                onResume={onResume}
                 onComplete={onComplete}
                 onEdit={onEdit}
                 onDelete={onDelete}

@@ -5,6 +5,8 @@ import { TagFilter } from '@/components/TagFilter'
 import { TaskCreateDialog } from '@/components/TaskCreateDialog'
 import { TaskEditDialog } from '@/components/TaskEditDialog'
 import { QuickNotePanel } from '@/components/QuickNotePanel'
+import { PrivacyScreen } from '@/components/PrivacyScreen'
+import { SettingsDialog } from '@/components/SettingsDialog'
 import { TaskList } from '@/components/TaskList'
 import { useTimesheet } from '@/hooks/useTimesheet'
 import { filterTasksByTags } from '@/lib/tags'
@@ -16,6 +18,7 @@ function App() {
   const [filterTagIds, setFilterTagIds] = useState<string[]>([])
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [editOpen, setEditOpen] = useState(false)
+  const [dataVersion, setDataVersion] = useState(0)
 
   const {
     tasks,
@@ -32,8 +35,17 @@ function App() {
     remove,
     addTag,
     removeTag,
+    refresh,
     now,
   } = useTimesheet(selectedDate)
+
+  const handleDataDeleted = () => {
+    setFilterTagIds([])
+    setEditingTask(null)
+    setEditOpen(false)
+    setDataVersion((v) => v + 1)
+    void refresh()
+  }
 
   const filteredTasks = useMemo(
     () => filterTasksByTags(tasks, filterTagIds),
@@ -131,7 +143,7 @@ function App() {
         </div>
       </div>
 
-      <QuickNotePanel />
+      <QuickNotePanel key={dataVersion} />
 
       <TaskEditDialog
         task={editingTask}
@@ -140,6 +152,12 @@ function App() {
         onOpenChange={setEditOpen}
         onSave={editTask}
         disabled={actionLoading}
+      />
+
+      <PrivacyScreen />
+      <SettingsDialog
+        disabled={actionLoading}
+        onDataDeleted={handleDataDeleted}
       />
     </div>
   )

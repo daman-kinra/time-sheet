@@ -11,7 +11,9 @@ import type {
   Task,
   TaskUpdate,
 } from '@/types'
+import { clearQuickNotePanelPrefs } from '@/lib/quickNotePrefs'
 import {
+  deleteEntireDatabase,
   deleteTagById,
   deleteTaskById,
   getAllTags,
@@ -245,4 +247,10 @@ export async function completeTask(id: string): Promise<Task> {
 export async function deleteTask(id: string): Promise<void> {
   await delay()
   await deleteTaskById(id)
+}
+
+export async function deleteAllData(): Promise<void> {
+  await delay()
+  await deleteEntireDatabase()
+  clearQuickNotePanelPrefs()
 }

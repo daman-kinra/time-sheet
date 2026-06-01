@@ -199,3 +199,28 @@ export async function deleteQuickNoteById(id: string): Promise<void> {
     stores[QUICK_NOTES_STORE].delete(id)
   })
 }
+
+export async function deleteEntireDatabase(): Promise<void> {
+  if (dbPromise) {
+    try {
+      const db = await dbPromise
+      db.close()
+    } catch {
+      // Connection may already be closed.
+    }
+  }
+  dbPromise = null
+
+  await new Promise<void>((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(DB_NAME)
+    request.onsuccess = () => resolve()
+    request.onerror = () =>
+      reject(request.error ?? new Error('Failed to delete database'))
+    request.onblocked = () =>
+      reject(
+        new Error(
+          'Could not delete database. Close other tabs with this app open.',
+        ),
+      )
+  })
+}

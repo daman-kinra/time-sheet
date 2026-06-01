@@ -31,3 +31,7 @@ export function loadQuickNotePanelPrefs(): QuickNotePanelPrefs {
 export function saveQuickNotePanelPrefs(prefs: QuickNotePanelPrefs): void {
   localStorage.setItem(PREFS_KEY, JSON.stringify(prefs))
 }
+
+export function clearQuickNotePanelPrefs(): void {
+  localStorage.removeItem(PREFS_KEY)
+}

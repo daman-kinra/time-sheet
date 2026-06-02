@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select'
 import { applyTaskEditUpdates } from '@/lib/segments'
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from '@/lib/time'
-import type { Tag, Task, TaskStatus, TaskUpdate } from '@/types'
+import type { Tag, Task, TaskStatus, TaskUpdate, TimeSegment } from '@/types'
 
 interface TaskEditDialogProps {
   task: Task | null
@@ -45,11 +45,20 @@ function TaskEditForm({ formId, task, tags, onSave, onClose, disabled }: TaskEdi
   const [date, setDate] = useState(task.date)
   const [status, setStatus] = useState<TaskStatus>(task.status)
   const [createdAt, setCreatedAt] = useState(toDatetimeLocalValue(task.createdAt))
-  const [startedAt, setStartedAt] = useState(
-    task.startedAt ? toDatetimeLocalValue(task.startedAt) : '',
-  )
-  const [completedAt, setCompletedAt] = useState(
-    task.completedAt ? toDatetimeLocalValue(task.completedAt) : '',
+  const [segments, setSegments] = useState<{ startedAt: string; endedAt: string }[]>(
+    task.segments.length > 0
+      ? task.segments.map((segment) => ({
+          startedAt: toDatetimeLocalValue(segment.startedAt),
+          endedAt: segment.endedAt ? toDatetimeLocalValue(segment.endedAt) : '',
+        }))
+      : task.startedAt
+        ? [
+            {
+              startedAt: toDatetimeLocalValue(task.startedAt),
+              endedAt: task.completedAt ? toDatetimeLocalValue(task.completedAt) : '',
+            },
+          ]
+        : [],
   )
   const [tagIds, setTagIds] = useState(task.tagIds)
   const [submitting, setSubmitting] = useState(false)
@@ -60,10 +69,39 @@ function TaskEditForm({ formId, task, tags, onSave, onClose, disabled }: TaskEdi
     )
   }
 
+  const updateSegment = (
+    index: number,
+    field: 'startedAt' | 'endedAt',
+    value: string,
+  ) => {
+    setSegments((prev) =>
+      prev.map((segment, i) =>
+        i === index ? { ...segment, [field]: value } : segment,
+      ),
+    )
+  }
+
+  const addSegment = () => {
+    setSegments((prev) => [...prev, { startedAt: '', endedAt: '' }])
+  }
+
+  const removeSegment = (index: number) => {
+    setSegments((prev) => prev.filter((_, i) => i !== index))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) return
     setSubmitting(true)
+
+    const updatedSegments: TimeSegment[] = segments
+      .filter((segment) => segment.startedAt)
+      .map((segment) => ({
+        startedAt: fromDatetimeLocalValue(segment.startedAt),
+        endedAt: segment.endedAt
+          ? fromDatetimeLocalValue(segment.endedAt)
+          : undefined,
+      }))
 
     const base: TaskUpdate = {
       title: title.trim(),
@@ -72,8 +110,9 @@ function TaskEditForm({ formId, task, tags, onSave, onClose, disabled }: TaskEdi
       status,
       createdAt: fromDatetimeLocalValue(createdAt),
       tagIds,
-      startedAt: startedAt ? fromDatetimeLocalValue(startedAt) : undefined,
-      completedAt: completedAt ? fromDatetimeLocalValue(completedAt) : undefined,
+      segments: updatedSegments,
+      startedAt: updatedSegments[0]?.startedAt,
+      completedAt: updatedSegments[updatedSegments.length - 1]?.endedAt,
     }
 
     const updates = applyTaskEditUpdates(task, base)
@@ -149,32 +188,66 @@ function TaskEditForm({ formId, task, tags, onSave, onClose, disabled }: TaskEdi
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="edit-started">Start time</Label>
-          <Input
-            id="edit-started"
-            type="datetime-local"
-            value={startedAt}
-            onChange={(e) => setStartedAt(e.target.value)}
-            disabled={
-              disabled || submitting || status === 'pending'
-            }
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="edit-completed">End time</Label>
-          <Input
-            id="edit-completed"
-            type="datetime-local"
-            value={completedAt}
-            onChange={(e) => setCompletedAt(e.target.value)}
-            disabled={
-              disabled ||
-              submitting ||
-              (status !== 'completed' && status !== 'paused')
-            }
-          />
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label>Segments</Label>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addSegment}
+              disabled={disabled || submitting || status === 'pending'}
+            >
+              Add segment
+            </Button>
+          </div>
+          <div className="space-y-3">
+            {segments.map((segment, index) => (
+              <div key={`${index}-${segment.startedAt}`} className="rounded-md border p-3">
+                <p className="mb-3 text-xs text-muted-foreground">Segment {index + 1}</p>
+                <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+                  <div className="space-y-2">
+                    <Label htmlFor={`edit-segment-start-${index}`}>Start time</Label>
+                    <Input
+                      id={`edit-segment-start-${index}`}
+                      type="datetime-local"
+                      value={segment.startedAt}
+                      onChange={(e) =>
+                        updateSegment(index, 'startedAt', e.target.value)
+                      }
+                      disabled={disabled || submitting || status === 'pending'}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`edit-segment-end-${index}`}>End time</Label>
+                    <Input
+                      id={`edit-segment-end-${index}`}
+                      type="datetime-local"
+                      value={segment.endedAt}
+                      onChange={(e) =>
+                        updateSegment(index, 'endedAt', e.target.value)
+                      }
+                      disabled={disabled || submitting}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => removeSegment(index)}
+                      disabled={disabled || submitting}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {segments.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                No segments yet. Add one to set start/end times.
+              </p>
+            )}
+          </div>
         </div>
 
         {tags.length > 0 && (
@@ -213,7 +286,7 @@ export function TaskEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Edit task</DialogTitle>
         </DialogHeader>

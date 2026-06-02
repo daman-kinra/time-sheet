@@ -78,7 +78,7 @@ export function applyTaskEditUpdates(
   const task = ensureSegments({ ...current, ...updates })
   const status = updates.status ?? task.status
   const now = new Date().toISOString()
-  let segments = [...task.segments]
+  let segments = updates.segments ? [...updates.segments] : [...task.segments]
 
   if (status === 'pending') {
     return {
@@ -96,6 +96,20 @@ export function applyTaskEditUpdates(
     updates.completedAt !== undefined ? updates.completedAt : task.completedAt
 
   if (status === 'completed') {
+    if (updates.segments) {
+      const fallbackEnd = completedAt ?? now
+      segments = closeAllSegments(segments, fallbackEnd)
+      return syncTaskTimestamps({
+        ...task,
+        ...updates,
+        status,
+        segments,
+        startedAt: segments[0]?.startedAt ?? startedAt ?? now,
+        completedAt:
+          segments[segments.length - 1]?.endedAt ?? completedAt ?? fallbackEnd,
+      })
+    }
+
     const start = startedAt ?? now
     const end = completedAt ?? now
     segments = [{ startedAt: start, endedAt: end }]
@@ -109,6 +123,20 @@ export function applyTaskEditUpdates(
   }
 
   if (status === 'running') {
+    if (updates.segments) {
+      const hasOpenSegment = getOpenSegmentIndex(segments) !== -1
+      if (!hasOpenSegment) {
+        segments = [...segments, { startedAt: startedAt ?? now }]
+      }
+      return {
+        ...updates,
+        status,
+        segments,
+        startedAt: segments[0]?.startedAt ?? startedAt ?? now,
+        completedAt: undefined,
+      }
+    }
+
     const start = startedAt ?? now
     if (getOpenSegmentIndex(segments) === -1) {
       segments = [...closeAllSegments(segments, now), { startedAt: start }]

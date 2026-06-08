@@ -1,16 +1,29 @@
 import { useMemo, useState } from 'react'
+import { AppSidebar } from '@/components/AppSidebar'
 import { DayHeader } from '@/components/DayHeader'
+import { LayoutToggle } from '@/components/LayoutToggle'
 import { TagDialog } from '@/components/TagDialog'
 import { TagFilter } from '@/components/TagFilter'
 import { TaskCreateDialog } from '@/components/TaskCreateDialog'
 import { TaskEditDialog } from '@/components/TaskEditDialog'
 import { QuickNotePanel } from '@/components/QuickNotePanel'
-import { PrivacyScreen } from '@/components/PrivacyScreen'
 import { SettingsDialog } from '@/components/SettingsDialog'
+import { TaskKanbanBoard } from '@/components/TaskKanbanBoard'
 import { TaskList } from '@/components/TaskList'
 import { useTimesheet } from '@/hooks/useTimesheet'
 import { filterTasksByTags } from '@/lib/tags'
+import {
+  loadKanbanColumnColors,
+  saveKanbanColumnColors,
+  type KanbanColumnColors,
+} from '@/lib/kanbanColumnPrefs'
+import {
+  loadTaskLayout,
+  saveTaskLayout,
+  type TaskLayout,
+} from '@/lib/taskLayoutPrefs'
 import { calculateDailyWorkedMs, getTodayKey } from '@/lib/time'
+import { cn } from '@/lib/utils'
 import type { Task } from '@/types'
 
 function App() {
@@ -19,6 +32,11 @@ function App() {
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [editOpen, setEditOpen] = useState(false)
   const [dataVersion, setDataVersion] = useState(0)
+  const [layout, setLayout] = useState<TaskLayout>(() => loadTaskLayout())
+  const [columnColors, setColumnColors] = useState<KanbanColumnColors>(() =>
+    loadKanbanColumnColors(),
+  )
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const {
     tasks,
@@ -71,10 +89,30 @@ function App() {
     setEditOpen(true)
   }
 
+  const handleLayoutChange = (next: TaskLayout) => {
+    setLayout(next)
+    saveTaskLayout(next)
+  }
+
+  const handleColumnColorsChange = (colors: KanbanColumnColors) => {
+    setColumnColors(colors)
+    saveKanbanColumnColors(colors)
+  }
+
   return (
-    <div className="flex min-h-svh bg-background">
-      <div className="min-w-0 flex-1">
-        <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+    <div className="flex h-svh overflow-hidden bg-background">
+      <AppSidebar
+        onOpenSettings={() => setSettingsOpen(true)}
+        disabled={actionLoading}
+      />
+
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+        <div
+          className={cn(
+            'mx-auto px-4 py-8 sm:px-6',
+            layout === 'kanban' ? 'max-w-7xl' : 'max-w-3xl',
+          )}
+        >
         <DayHeader
           selectedDate={selectedDate}
           workedMs={filteredWorkedMs}
@@ -105,6 +143,11 @@ function App() {
               )}
             </h2>
             <div className="flex items-center gap-2">
+              <LayoutToggle
+                layout={layout}
+                onChange={handleLayoutChange}
+                disabled={actionLoading}
+              />
               <TagDialog
                 tags={tags}
                 onCreateTag={(name) => addTag({ name })}
@@ -121,24 +164,47 @@ function App() {
             </div>
           </div>
 
-          <TaskList
-            tasks={filteredTasks}
-            tags={tags}
-            loading={loading}
-            now={now}
-            onStart={(id) => start(id)}
-            onPause={(id) => pause(id)}
-            onResume={(id) => resume(id)}
-            onComplete={(id) => complete(id)}
-            onEdit={handleEdit}
-            onDelete={(id) => remove(id)}
-            disabled={actionLoading}
-            emptyMessage={
-              filterTagIds.length > 0
-                ? 'No tasks match the selected tags for this day.'
-                : undefined
-            }
-          />
+          {layout === 'list' ? (
+            <TaskList
+              tasks={filteredTasks}
+              tags={tags}
+              loading={loading}
+              now={now}
+              onStart={(id) => start(id)}
+              onPause={(id) => pause(id)}
+              onResume={(id) => resume(id)}
+              onComplete={(id) => complete(id)}
+              onEdit={handleEdit}
+              onDelete={(id) => remove(id)}
+              disabled={actionLoading}
+              columnColors={columnColors}
+              emptyMessage={
+                filterTagIds.length > 0
+                  ? 'No tasks match the selected tags for this day.'
+                  : undefined
+              }
+            />
+          ) : (
+            <TaskKanbanBoard
+              tasks={filteredTasks}
+              tags={tags}
+              loading={loading}
+              now={now}
+              onStart={(id) => start(id)}
+              onPause={(id) => pause(id)}
+              onResume={(id) => resume(id)}
+              onComplete={(id) => complete(id)}
+              onEdit={handleEdit}
+              onDelete={(id) => remove(id)}
+              disabled={actionLoading}
+              columnColors={columnColors}
+              emptyMessage={
+                filterTagIds.length > 0
+                  ? 'No tasks match the selected tags for this day.'
+                  : undefined
+              }
+            />
+          )}
         </main>
         </div>
       </div>
@@ -154,10 +220,13 @@ function App() {
         disabled={actionLoading}
       />
 
-      <PrivacyScreen />
       <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
         disabled={actionLoading}
         onDataDeleted={handleDataDeleted}
+        columnColors={columnColors}
+        onColumnColorsChange={handleColumnColorsChange}
       />
     </div>
   )

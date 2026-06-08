@@ -48,7 +48,7 @@ export function QuickNotePanel() {
     return (
       <aside
         className={cn(
-          'flex min-h-svh flex-col border-l bg-card/50',
+          'flex h-svh shrink-0 flex-col overflow-hidden border-l bg-card/50',
           panelWidth.collapsed,
         )}
       >
@@ -78,7 +78,7 @@ export function QuickNotePanel() {
   return (
     <aside
       className={cn(
-        'flex min-h-svh flex-col border-l bg-card/30',
+        'flex h-svh shrink-0 flex-col overflow-hidden border-l bg-card/30',
         panelWidth[size],
       )}
     >

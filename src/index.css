@@ -122,10 +122,13 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply overflow-hidden bg-background text-foreground;
   }
   html {
-    @apply font-sans;
+    @apply h-full overflow-hidden font-sans;
+  }
+  #root {
+    @apply h-full;
   }
   html.dark {
     color-scheme: dark;

@@ -56,7 +56,13 @@ export function TaskList({
   const pending = tasks.filter((t) => t.status === 'pending')
   const running = tasks.filter((t) => t.status === 'running')
   const paused = tasks.filter((t) => t.status === 'paused')
-  const completed = tasks.filter((t) => t.status === 'completed')
+  const completed = tasks
+    .filter((t) => t.status === 'completed')
+    .sort(
+      (a, b) =>
+        new Date(a.completedAt ?? 0).getTime() -
+        new Date(b.completedAt ?? 0).getTime(),
+    )
 
   const sections = [
     { label: 'Running', items: running },

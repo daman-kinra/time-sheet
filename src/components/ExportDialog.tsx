@@ -226,7 +226,9 @@ export function ExportDialog({ disabled }: { disabled?: boolean }) {
               )}
             />
             <p className="text-xs text-muted-foreground">
-              One line per task, e.g.{' '}
+              Each day shows its total, e.g.{' '}
+              <span className="font-mono">2025-06-08 (5hr 30min)</span>, then one
+              line per task, e.g.{' '}
               <span className="font-mono">Meeting (1hr 30min)</span>. Running
               tasks use time tracked so far.
             </p>

@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from '@/lib/time'
 import type { CreateTaskInput, Tag } from '@/types'
 
@@ -86,11 +87,11 @@ function TaskCreateForm({
 
       <div className="space-y-2">
         <Label htmlFor="task-desc">Description (optional)</Label>
-        <Input
+        <MarkdownEditor
           id="task-desc"
-          placeholder="Notes"
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={setDescription}
+          placeholder="Notes in Markdown…"
           disabled={disabled || submitting}
         />
       </div>

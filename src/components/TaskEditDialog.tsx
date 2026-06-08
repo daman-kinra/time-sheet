@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { MarkdownEditor } from '@/components/MarkdownEditor'
 import {
   Select,
   SelectContent,
@@ -138,11 +139,13 @@ function TaskEditForm({ formId, task, tags, onSave, onClose, disabled }: TaskEdi
 
         <div className="space-y-2">
           <Label htmlFor="edit-desc">Description</Label>
-          <Input
+          <MarkdownEditor
             id="edit-desc"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={setDescription}
+            placeholder="Notes in Markdown…"
             disabled={disabled || submitting}
+            minRows={5}
           />
         </div>
 

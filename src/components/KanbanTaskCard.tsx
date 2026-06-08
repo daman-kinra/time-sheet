@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { formatDuration, getTaskDurationMs } from '@/lib/time'
+import { TaskDescription } from '@/components/TaskDescription'
 import type { Tag, Task } from '@/types'
 
 interface KanbanTaskCardContentProps {
@@ -18,6 +19,7 @@ interface KanbanTaskCardContentProps {
   onComplete: (id: string) => void
   onEdit: (task: Task) => void
   onDelete: (id: string) => void
+  onSaveDescription: (id: string, description: string | undefined) => Promise<void>
   disabled?: boolean
 }
 
@@ -68,6 +70,7 @@ function KanbanTaskCardContent({
   onComplete,
   onEdit,
   onDelete,
+  onSaveDescription,
   disabled,
 }: KanbanTaskCardContentProps) {
   const taskTags = tags.filter((t) => task.tagIds.includes(t.id))
@@ -85,11 +88,13 @@ function KanbanTaskCardContent({
           )}
         </div>
 
-        {task.description && (
-          <p className="line-clamp-2 text-xs text-muted-foreground">
-            {task.description}
-          </p>
-        )}
+        <TaskDescription
+          description={task.description}
+          completed={task.status === 'completed'}
+          onSave={(description) => onSaveDescription(task.id, description)}
+          disabled={disabled}
+          compact
+        />
 
         {taskTags.length > 0 && (
           <div className="flex flex-wrap gap-1">
@@ -192,6 +197,7 @@ interface KanbanTaskCardProps {
   onComplete: (id: string) => void
   onEdit: (task: Task) => void
   onDelete: (id: string) => void
+  onSaveDescription: (id: string, description: string | undefined) => Promise<void>
   disabled?: boolean
 }
 

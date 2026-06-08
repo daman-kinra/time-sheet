@@ -7,6 +7,7 @@ import {
   formatTime,
   getTaskDurationMs,
 } from '@/lib/time'
+import { TaskDescription } from '@/components/TaskDescription'
 import type { Tag, Task } from '@/types'
 
 const statusLabels = {
@@ -33,6 +34,7 @@ interface TaskCardProps {
   onComplete: (id: string) => void
   onEdit: (task: Task) => void
   onDelete: (id: string) => void
+  onSaveDescription: (id: string, description: string | undefined) => Promise<void>
   disabled?: boolean
 }
 
@@ -46,6 +48,7 @@ export function TaskCard({
   onComplete,
   onEdit,
   onDelete,
+  onSaveDescription,
   disabled,
 }: TaskCardProps) {
   const taskTags = tags.filter((t) => task.tagIds.includes(t.id))
@@ -67,9 +70,12 @@ export function TaskCard({
             )}
           </div>
 
-          {task.description && (
-            <p className="text-sm text-muted-foreground">{task.description}</p>
-          )}
+          <TaskDescription
+            description={task.description}
+            completed={task.status === 'completed'}
+            onSave={(description) => onSaveDescription(task.id, description)}
+            disabled={disabled}
+          />
 
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
             <span>Created: {formatTime(task.createdAt)}</span>

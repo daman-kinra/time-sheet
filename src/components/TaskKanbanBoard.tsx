@@ -36,6 +36,7 @@ interface TaskKanbanBoardProps {
   onComplete: (id: string) => void
   onEdit: (task: Task) => void
   onDelete: (id: string) => void
+  onSaveDescription: (id: string, description: string | undefined) => Promise<void>
   disabled?: boolean
   emptyMessage?: string
   columnColors?: KanbanColumnColors
@@ -54,6 +55,7 @@ interface KanbanColumnProps {
   onComplete: (id: string) => void
   onEdit: (task: Task) => void
   onDelete: (id: string) => void
+  onSaveDescription: (id: string, description: string | undefined) => Promise<void>
   disabled?: boolean
   isOver?: boolean
 }
@@ -71,6 +73,7 @@ function KanbanColumn({
   onComplete,
   onEdit,
   onDelete,
+  onSaveDescription,
   disabled,
   isOver,
 }: KanbanColumnProps) {
@@ -146,6 +149,7 @@ function KanbanColumn({
               onComplete={onComplete}
               onEdit={onEdit}
               onDelete={onDelete}
+              onSaveDescription={onSaveDescription}
               disabled={disabled}
             />
           ))
@@ -166,6 +170,7 @@ export function TaskKanbanBoard({
   onComplete,
   onEdit,
   onDelete,
+  onSaveDescription,
   disabled,
   emptyMessage,
   columnColors = DEFAULT_KANBAN_COLUMN_COLORS,
@@ -302,6 +307,7 @@ export function TaskKanbanBoard({
             onComplete={onComplete}
             onEdit={onEdit}
             onDelete={onDelete}
+            onSaveDescription={onSaveDescription}
             disabled={disabled}
             isOver={overColumn === column.status}
           />
@@ -320,6 +326,7 @@ export function TaskKanbanBoard({
             onComplete={onComplete}
             onEdit={onEdit}
             onDelete={onDelete}
+            onSaveDescription={onSaveDescription}
           />
         ) : null}
       </DragOverlay>

@@ -176,6 +176,9 @@ function App() {
               onComplete={(id) => complete(id)}
               onEdit={handleEdit}
               onDelete={(id) => remove(id)}
+              onSaveDescription={async (id, description) => {
+                await editTask(id, { description })
+              }}
               disabled={actionLoading}
               columnColors={columnColors}
               emptyMessage={
@@ -196,6 +199,9 @@ function App() {
               onComplete={(id) => complete(id)}
               onEdit={handleEdit}
               onDelete={(id) => remove(id)}
+              onSaveDescription={async (id, description) => {
+                await editTask(id, { description })
+              }}
               disabled={actionLoading}
               columnColors={columnColors}
               emptyMessage={

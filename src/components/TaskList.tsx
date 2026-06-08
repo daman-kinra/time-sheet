@@ -18,6 +18,7 @@ interface TaskListProps {
   onComplete: (id: string) => void
   onEdit: (task: Task) => void
   onDelete: (id: string) => void
+  onSaveDescription: (id: string, description: string | undefined) => Promise<void>
   disabled?: boolean
   emptyMessage?: string
   columnColors?: KanbanColumnColors
@@ -34,6 +35,7 @@ export function TaskList({
   onComplete,
   onEdit,
   onDelete,
+  onSaveDescription,
   disabled,
   emptyMessage,
   columnColors = DEFAULT_KANBAN_COLUMN_COLORS,
@@ -139,6 +141,7 @@ export function TaskList({
                   onComplete={onComplete}
                   onEdit={onEdit}
                   onDelete={onDelete}
+                  onSaveDescription={onSaveDescription}
                   disabled={disabled}
                 />
               ))}
